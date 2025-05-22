@@ -72,121 +72,109 @@ header-includes:
 
 # Выполнение работы
 
-После скачивания sali я попытался установить pipenv на свой сервер, но в резлуьтате этой попытки вышла ошибка следующего содержания:
-
-```
-ubuntu@ubuntu-cloud:~$ sudo -i
-root@ubuntu-cloud:~# apt --fix-broken install
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-Correcting dependencies... Done
-The following packages were automatically installed and are no longer required:
-  libexpat1-dev libpython3-dev libpython3.8-dev python-pip-whl python3-appdirs
-  python3-dev python3-filelock python3-virtualenv-clone python3-wheel
-  python3.8-dev zlib1g-dev
-Use 'apt autoremove' to remove them.
-The following additional packages will be installed:
-  g++-9 python3.8-dev zlib1g-dev
-Suggested packages:
-  g++-9-multilib gcc-9-doc
-The following NEW packages will be installed:
-  g++-9 python3.8-dev zlib1g-dev
-0 upgraded, 3 newly installed, 0 to remove and 21 not upgraded.
-3 not fully installed or removed.
-Need to get 0 B/9091 kB of archives.
-After this operation, 29.8 MB of additional disk space will be used.
-Do you want to continue? [Y/n] y
-(Reading database ... 68357 files and directories currently installed.)
-Preparing to unpack .../g++-9_9.4.0-1ubuntu1~20.04.2_amd64.deb ...
-Unpacking g++-9 (9.4.0-1ubuntu1~20.04.2) ...
-dpkg: error processing archive /var/cache/apt/archives/g++-9_9.4.0-1ubuntu1~20.04.2_amd64.deb (--unpack):
- cannot copy extracted data for './usr/bin/x86_64-linux-gnu-g++-9' to '/usr/bin/x86_64-linux-gnu-g++-9.dpkg-new': failed to write (No space left on device)
-dpkg-deb: error: paste subprocess was killed by signal (Broken pipe)
-No apport report written because the error message indicates a disk full error
-                                                                              Preparing to unpack .../zlib1g-dev_1%3a1.2.11.dfsg-2ubuntu1.5_amd64.deb ...
-Unpacking zlib1g-dev:amd64 (1:1.2.11.dfsg-2ubuntu1.5) ...
-dpkg: error processing archive /var/cache/apt/archives/zlib1g-dev_1%3a1.2.11.dfsg-2ubuntu1.5_amd64.deb (--unpack):
- cannot copy extracted data for './usr/share/doc/zlib1g-dev/examples/gzjoin.c' to '/usr/share/doc/zlib1g-dev/examples/gzjoin.c.dpkg-new': failed to write (No space left on device)
-No apport report written because the error message indicates a disk full error
-                                                                              Preparing to unpack .../python3.8-dev_3.8.10-0ubuntu1~20.04.18_amd64.deb ...
-Unpacking python3.8-dev (3.8.10-0ubuntu1~20.04.18) ...
-dpkg: error processing archive /var/cache/apt/archives/python3.8-dev_3.8.10-0ubuntu1~20.04.18_amd64.deb (--unpack):
- cannot copy extracted data for './usr/share/doc/python3.8/HISTORY.gz' to '/usr/share/doc/python3.8/HISTORY.gz.dpkg-new': failed to write (No space left on device)
-dpkg-deb: error: paste subprocess was killed by signal (Broken pipe)
-No apport report written because the error message indicates a disk full error
-                                                                              dpkg: error: failed to write status database record about 'make' to '/var/lib/dpkg/status': No space left on device
-E: Sub-process /usr/bin/dpkg returned an error code (2)
-root@ubuntu-cloud:~#
-```
-
-Исходя из этого сообщения, я сделал вывод, что на сервере недостаточно места и начал искать информацию о том, как это исправить. Конфигурация через gns (правая кнопка -> configure) ничего не дала, т.к. там есть только параметр оперативной памяти. Вкладка HDD оказалась совсем непонятной ия  решил её не трогать. Пробовал очищать лишние файлы и кэш с помощью команд.
+После решения проблемы с нехватком места, ярешил храить все файлы в /data на /dev/sdb1. Создал для этого специальную папку 
 
 ```bash
-sudo apt-get clean
-sudo apt-get autoremove --purge
-sudo rm -rf /var/cache/apt/archives/*
-sudo rm -rf /tmp/*
-sudo journalctl --vacuum-time=1d
+cd /data
+mkdir my_project
+mkdir sali
+cd my_project
 ```
 
-Но это ничего не дало. Также я проверил и несколько раз убедился в том, что на моем компьютере место на жестком диске имеется. Также при запуске всей модели в gns, регулярно выходит сообщение о нехватке оперативной памяти (есть предположение, что проблема может быть и в этом тоже, но я не смог подтвердить этот довод).
+Врменно указал использовать /data как кэш для apt
 
-Далее я пытался настроить объем жесткого диска чрез сам hyper-v, но он не дал этого сделать из-за предупреждения на скриншотах:
-
-![Первый жесткий диск](image/Первый%20жесткий%20диск%20в%20hyper-v.png){#fig:0044 width=70%}
-
-![Второй жесткий диск](image/Второй%20жесткий%20диск%20в%20hyper-v.png){#fig:0045 width=70%}
-
-Спустя некоторое время поисков решения, я решил проделать манипуляцию объединения виртуального жесткого диска с родительским жестким диском через пункт в меню hyper-v - "Изменить диск...".
-
-![Содержимое папки с дисками](image/Папка_с_дисками.png){#fig:00466 width=70%}
-
-Тут я выбрал disk001 и объединил его далее с родительским диском, что повлекло за собой полный отказ в работе вирутальной машины. Пришлось восстанавливать и откатываться к предыдущей версии. Места от этого не прибавилось. 
-
-Далее, чтобы не терять времени зря, я попробовал составить необходимую последовательность команд (следуя документации), для настройки и установки sali (пока без bittorrent).
-
-
-Установка необходимых пакетов:
 ```bash
-sudo apt update
-sudo apt install -y qemu wget python3 python3-pip virtualenv virtualenvwrapper
+echo 'Dir::Cache "/data/apt-cache";' | sudo tee /etc/apt/apt.conf.d/99altcache
 ```
 
-Скачивание и распаковка buildroot
+После этого установил необходимые пакеты через TMPDIR из-за нехватки места на основном разделе
 
 ```bash
-cd /tmp
-wget https://buildroot.org/downloads/buildroot-2022.11.1.tar.gz
-tar xvf buildroot-2022.11.1.tar.gz
-cd buildroot-2022.11.1
+TMPDIR=/data sudo growpart /dev/sda 1
+TMPDIR=/data sudo apt install qemu python3-pip
 ```
 
-Запуск сборки:
+Сделаk символическую ссылку на /var/cache/apt/archives
 
 ```bash
-make xxhash
-make zstd
+sudo mkdir -p /data/apt-archives
+sudo mv /var/cache/apt/archives/* /data/apt-archives/
+sudo rm -rf /var/cache/apt/archives
+sudo ln -s /data/apt-archives /var/cache/apt/archives
+```
+
+![Содержимое папки sali](image/sali_содержимое.png){width=70%}
+
+Далее я произвел попытку установить sali-cli, в следвтивии чего возникла ошибка о несуществовании gcc. Пришлось скачивать еще дополнительный gfrtn build-essential.
+
+1. Использую apt с кэшем и временными файлами на /data
+
+```bash
+sudo mkdir -p /data/apt-tmp
+sudo mkdir -p /data/apt-cache
+```
+
+2. Установи gcc и другие сборочные инструменты с перемещённым кэшем
+
+```bash
+sudo apt -o Dir::Cache::Archives="/data/apt-cache" \
+         -o Dir::Cache="/data/apt-tmp" \
+         install build-essential -y
+```
+
+После этого пытаюсь запустить команду
+
+
+```bash
+make BR2_EXTERNAL=/data/sali/buildroot sali_x86_64_defconfig
 make
 ```
 
-После всего этого и настройки конфига sali нужно добавить в dnsmasq.conf строку  ```pxe-service=x86PC, "Boot SALI", pxelinux```.
-Далее настроить загрузчик PXE. 
+В результате чего получаю несколько ошибок в том числе и ошибку, связанную с отсутствием gcc. Исправив её окончательно, я устанавливаю pipenv и среду разработки как сказано в документации в разделе для сервера sali
+
+![Логи после выпонения команды pipenv shell](image/pipenv.png){width=70%}
+
+Перейдя непосредственно в папку /data/sali, я выполнил команду pipenv shell повторно и получил ошибку и следующий лог:
+
+![Логи и ошибка a](image/логи_ошибка.png){width=70%}
+
+![Логи и ошибка b](image/логи%20и%20ошибка_2.png){width=70%}
+
+Попрбовал выполнить команду pip install --dev и получил точно такой же лог с ошибками. 
+
+![Логи и ошибка pipenv install --dev](image/pipenv_dev_err1.png){width=70%}
+
+![Логи и ошибка pipenv install --dev](image/pipenv_err2.png){width=70%}
+
+Далее попробовал использовать команду sali-cli, файл которой уже лежит в папке /data/sali со скачаными исходниками, но вышла ошибка, что команда не найдена. Начал чистить кэш, чтобы поппытаться решить предыдущие проблемы
+
+![Очистка кэша и попытка запустить sali-cli](image/sali_cli_cache.png){width=70%}
+
+Пробую создать виртуальное окружение в виде папки .venv прямо внутри каталога /data/sali.
 
 ```bash
-sudo nano /srv/tftp/pxelinux.cfg/default
+export PIPENV_VENV_IN_PROJECT=1
+pipenv install --dev
 ```
-где содержимое файла имеет следующий вид:
+
+перенаправляю кэш pipenv и pip на /data
+
+1. Указываю директорию кэша для pipenv:
 
 ```bash
-DEFAULT linux
-LABEL linux
-    KERNEL bzImage
-    APPEND initrd=rootfs.cpio.gz console=ttyS0
+export PIPENV_CACHE_DIR=/data/.cache/pipenv
 ```
 
-В результате я так и не смог найти никакой рабочей информации по изменению размера жесткого диска в связке с gns.
+2. Указываю директорию кэша для pip:
 
-# Выводы
+```bash
+export PIP_CACHE_DIR=/data/.cache/pip
+```
 
-В результате работы была скачана sali, и применены попытки расширения жесткого диска, которые успехом, к сожалению не увенчались.
+3. Повторно пробую запустить команду pipenv install --dev
+
+![Полученный лог и ошибки после команд выше](image/44.png){width=70%}
+
+Ошибка была в ссылке на репозиторий pip, я исправил эту ссылку, но в итоге всё равно получил много ошибок, с которыми уже не знаю, что делать.
+
+![Вывод после всё тех же команд](image/55.png){width=70%}
